@@ -49,8 +49,8 @@ static int         cfg_n_pings[2] = { 1, 1 };
 static int         cfg_n_pongs = 1;
 static int         cfg_nodelay[2];
 static unsigned    cfg_busy_poll[2];
-static unsigned    cfg_sleep_gap = 0;
-static unsigned    cfg_spin_gap = 0;
+static unsigned    cfg_sleep_gap[2] = { 0, 1 };
+static unsigned    cfg_spin_gap[2] = { 0, 1 };
 static unsigned    cfg_msg_more[2];
 static unsigned    cfg_v6only[2];
 static int         cfg_ipv4;
@@ -110,8 +110,8 @@ static struct sfnt_cmd_line_opt cfg_opts[] = {
   CL1U("n-pongs",     cfg_n_pongs,     "number of pong messages"             ),
   CL2F("nodelay",     cfg_nodelay,     "enable TCP_NODELAY"                  ),
   CL2U("busy-poll",   cfg_busy_poll,   "SO_BUSY_POLL (in microseconds)"      ),
-  CL1U("sleep-gap",   cfg_sleep_gap,   "gap in usec to sleep between iter"   ),
-  CL1U("spin-gap",    cfg_spin_gap,    "gap in usec to spin between iter"    ),
+  CL2U("sleep-gap",   cfg_sleep_gap,   "<X;Y> sleep for X usec every Y iter" ),
+  CL2U("spin-gap",    cfg_spin_gap,    "<X;Y> spin for X usec every Y iter"  ),
   CL2F("more",        cfg_msg_more,    "MSG_MORE for first n-1 pings/pongs"  ),
   CL2F("v6only",      cfg_v6only,      "enable IPV6_V6ONLY sockopt"          ),
   CL1F("ipv4",        cfg_ipv4,        "use IPv4 only"                       ),
@@ -1073,10 +1073,11 @@ static void do_pings(int ss, int read_fd, int write_fd, int msg_size,
     results[i] = sfnt_tsc_nsec(&tsc, stop - start - tsc.tsc_cost);
     if( ! cfg_rtt )
       results[i] /= 2;
-    if( cfg_sleep_gap )
-      usleep(cfg_sleep_gap);
-    if( cfg_spin_gap ) 
-      sfnt_tsc_usleep(&tsc, cfg_spin_gap);
+    /* Sleep for cfg_sleep_gap[0] microseconds every cfg_sleep_gap[1] iterations.*/
+    if( cfg_sleep_gap[0] && ((i + 1) % cfg_sleep_gap[1] == 0 ))
+      usleep(cfg_sleep_gap[0]);
+    if( cfg_spin_gap[0] && ((i + 1) % cfg_spin_gap[1] == 0 ))
+      sfnt_tsc_usleep(&tsc, cfg_spin_gap[0]);
   }
 }
 
